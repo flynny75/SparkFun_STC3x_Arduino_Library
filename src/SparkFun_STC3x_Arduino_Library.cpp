@@ -478,15 +478,15 @@ bool STC3x::setCalibrationData(uint16_t* data)
     for(int i = 0; i < 10; i++)
     {
         delay(75);
-        auto toWrite = existing[i];
+        auto toWrite = data[i];
 
-        uint8_t data[2];
-        data[0] = toWrite >> 8;
-        data[1] = toWrite & 0xFF;
-        uint8_t crc = computeCRC8(data, 2);
+        uint8_t d[2];
+        d[0] = toWrite >> 8;
+        d[1] = toWrite & 0xFF;
+        uint8_t crc = computeCRC8(d, 2);
 
-        _i2cPort->write(data[0]);
-        _i2cPort->write(data[1]);
+        _i2cPort->write(d[0]);
+        _i2cPort->write(d[1]);
         _i2cPort->write(crc);
     }
 
