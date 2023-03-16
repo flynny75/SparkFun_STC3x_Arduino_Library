@@ -148,7 +148,7 @@ public:
 
   uint16_t* readCalibrationData();
 
-  bool setCalibrationData(uint16_t data);
+  bool setCalibrationData(uint16_t* data);
 
 private:
   //Variables
