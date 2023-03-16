@@ -146,8 +146,10 @@ public:
 
   uint8_t computeCRC8(uint8_t data[], uint8_t len);
 
+  // Read the calibration data into a data array of 10 items. Returns NULL in case of error.
   uint16_t* readCalibrationData();
 
+  // Write a 10 element array of calibration data. Returns false in case of error.
   bool setCalibrationData(uint16_t* data);
 
 private:
