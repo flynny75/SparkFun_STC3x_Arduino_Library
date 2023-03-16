@@ -146,6 +146,10 @@ public:
 
   uint8_t computeCRC8(uint8_t data[], uint8_t len);
 
+  uint16_t readCalibrationData();
+
+  bool setCalibrationData(uint16_t data);
+
 private:
   //Variables
 #ifdef USE_TEENSY3_I2C_LIB

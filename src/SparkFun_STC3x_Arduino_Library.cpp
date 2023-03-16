@@ -396,6 +396,119 @@ bool STC3x::getProductIdentifier(uint32_t *productNumber, char *serialNumber)
   return (true); //Success!
 }
 
+uint16_t* STC3x::readCalibrationData()
+{
+  static uint16_t calibrateData[10];
+
+  if(!sendCommand(STC3X_COMMAND_PREPARE_READ_STATE)){
+    if(_printDebug == true)
+    {
+      _debugPort->println("Fail to prepare read state");
+    }
+    return NULL;
+  }
+
+  delay(75);
+
+  if(!sendCommand(STC3X_COMMAND_READ_WRITE_STATE)){
+    if(_printDebug)
+    {
+      _debugPort->println("Fail to enter read state");
+    }
+    return NULL;
+  }
+
+  delay(75);
+
+  uint8_t receivedBytes = (uint8_t)_i2cPort->requestFrom((uint8_t)_stc3x_i2c_address, (uint8_t)30);
+
+  if(receivedBytes != 30){
+      if(_printDebug)
+      {
+        _debugPort->print("Bad received bytes: ");
+        _debugPort->println(receivedBytes);
+      }
+      return NULL;
+  }
+
+  // Read state
+  for(int i = 0; i < 10; i++)
+  {
+    delay(75);
+    if (_i2cPort->available())
+    {
+      uint8_t data[2];
+      data[0] = _i2cPort->read();
+      data[1] = _i2cPort->read();
+      uint8_t crc = _i2cPort->read();
+      uint8_t expectedCRC = computeCRC8(data, 2);
+      if (crc == expectedCRC){
+        calibrateData[i] = (uint16_t)data[0] << 8 | data[1];
+        continue;
+      }
+
+      if (_printDebug == true)
+      {
+        _debugPort->print(F("STC3x::readRegister: CRC fail: expected 0x"));
+        _debugPort->print(expectedCRC, HEX);
+        _debugPort->print(F(", got 0x"));
+        _debugPort->println(crc, HEX);
+        return NULL;
+      }
+    }
+    else
+    {
+      if(_printDebug)
+      {
+        _debugPort->println("Did not receive required bytes");
+      }
+      return NULL;
+    }
+  }
+
+  return calibrateData;
+}
+
+bool STC3x::setCalibrationData(uint16_t* data)
+{
+    _i2cPort->beginTransmission(_stc3x_i2c_address);
+    _i2cPort->write(STC3X_COMMAND_READ_WRITE_STATE >> 8);
+    _i2cPort->write(STC3X_COMMAND_READ_WRITE_STATE & 0xFF);
+
+    for(int i = 0; i < 10; i++)
+    {
+        delay(75);
+        auto toWrite = existing[i];
+
+        uint8_t data[2];
+        data[0] = toWrite >> 8;
+        data[1] = toWrite & 0xFF;
+        uint8_t crc = computeCRC8(data, 2);
+
+        _i2cPort->write(data[0]);
+        _i2cPort->write(data[1]);
+        _i2cPort->write(crc);
+    }
+
+    if (_i2cPort->endTransmission() != 0){
+      if(_printDebug)
+      {
+        _debugPort->println("Sensor didnt ack");
+      }
+      return false;
+    }
+
+    if(!sendCommand(STC3X_COMMAND_APPLY_STATE)){
+        if(_printDebug)
+        {
+          _debugPort->println("Fail to apply calibration data");
+        }
+        return false;
+    }
+
+    return true;
+}
+
 //PRIVATE: Convert serial number digit to ASCII
 char STC3x::convertHexToASCII(uint8_t digit)
 {
